@@ -1,0 +1,467 @@
+{
+  "name": "T14_Chat_Transcript_Summary",
+  "nodes": [
+    {
+      "id": "73504471-da35-496e-841e-b4bc64bd3142",
+      "name": "Note_9e34b413",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        50,
+        50
+      ],
+      "parameters": {
+        "content": "Created by Oyekola Ololade\nhttps://www.linkedin.com/in/ololade-oyekola-5b1797397/\nn8n Template Library - Gumroad",
+        "width": 300,
+        "height": 100,
+        "color": 4
+      }
+    },
+    {
+      "id": "b75a45b7-e569-4ab8-8194-3e8c179e122b",
+      "name": "Chat End Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "webhookId": "97443c6d-6275-426f-85f5-45401cbbc000",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat-summary",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "eede55b3-afad-4092-b94f-641da6e57f42",
+      "name": "Extract Transcript",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        450,
+        300
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "84cbbee2-7013-4a66-afb5-0a952c886dab",
+              "name": "chat_id",
+              "value": "={{ $json.body.chat_id }}",
+              "type": "string"
+            },
+            {
+              "id": "48b12fe7-ab65-4551-ba30-27c22c02fc61",
+              "name": "transcript",
+              "value": "={{ $json.body.transcript }}",
+              "type": "string"
+            },
+            {
+              "id": "260e3778-b274-4be0-ac49-b4aed7aa30e7",
+              "name": "customer",
+              "value": "={{ $json.body.customer_name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "6d59eb52-e9d1-4d10-8965-1cc6feb32c15",
+      "name": "Claude Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        650,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "YOUR_CLAUDE_API_KEY"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {},
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "claude-3-sonnet-20240229"
+            },
+            {
+              "name": "max_tokens",
+              "value": 1500
+            },
+            {
+              "name": "messages",
+              "value": "[{\"role\":\"user\",\"content\":\"Summarize this support chat. Provide: issue, resolution, customer satisfaction (1-10), action items. Transcript: {{ $json.transcript }}\"}]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cd352517-5798-422d-929a-1ef226b7510c",
+      "name": "Summary OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        850,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "97095fc8-0d47-467e-a49e-edbcea7657e1",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "56c92d85-9900-4d0d-93ad-cf77dea04af8",
+      "name": "Parse Report",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1050,
+        250
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "be9654ae-123d-4b35-82b3-ba9c4df6f69d",
+              "name": "issue",
+              "value": "={{ $json.content[0].text.match(/issue:\\s*(.+)/i)[1] }}",
+              "type": "string"
+            },
+            {
+              "id": "a6665142-83ba-4f0b-aed9-42b9e422020d",
+              "name": "resolution",
+              "value": "={{ $json.content[0].text.match(/resolution:\\s*(.+)/i)[1] }}",
+              "type": "string"
+            },
+            {
+              "id": "e08180e9-c2fb-4f13-bdf3-2b0a71eb7240",
+              "name": "satisfaction",
+              "value": "={{ $json.content[0].text.match(/satisfaction:\\s*(\\d+)/i)[1] }}",
+              "type": "string"
+            },
+            {
+              "id": "6e712181-d885-46ff-95e9-63935ce8e35c",
+              "name": "action_items",
+              "value": "={{ $json.content[0].text.match(/action items:\\s*(.+)/is)[1] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "82deea90-95ce-48c0-aa42-d0c8198d9bb4",
+      "name": "Email Manager",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1250,
+        250
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.sendgrid.com/v3/mail/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_SENDGRID_KEY"
+            }
+          ]
+        },
+        "options": {},
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "personalizations",
+              "value": "[{\"to\": [{\"email\": \"manager@yourcompany.com\"}]}]"
+            },
+            {
+              "name": "from_email",
+              "value": "{\"email\": \"support@yourcompany.com\"}"
+            },
+            {
+              "name": "subject",
+              "value": "=\"Chat Summary - \" + $json.customer"
+            },
+            {
+              "name": "content",
+              "value": "[{\"type\": \"text/html\", \"value\": \"<h3>Chat Summary</h3><p><b>Issue:</b> {{ $json.issue }}</p><p><b>Resolution:</b> {{ $json.resolution }}</p><p><b>Satisfaction:</b> {{ $json.satisfaction }}/10</p><p><b>Action Items:</b> {{ $json.action_items }}</p>\"}]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "10b57752-7226-430c-857d-1e5f5b4a4f2d",
+      "name": "Store in Airtable",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1250,
+        350
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.airtable.com/v0/YOUR_BASE_ID/Knowledge_Base",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_AIRTABLE_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {},
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "{\"Chat_ID\": \"{{ $json.chat_id }}\", \"Customer\": \"{{ $json.customer }}\", \"Issue\": \"{{ $json.issue }}\", \"Resolution\": \"{{ $json.resolution }}\", \"Satisfaction\": \"{{ $json.satisfaction }}\", \"Action_Items\": \"{{ $json.action_items }}\", \"Date\": \"{{ $now.toISO() }}\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3a4aa08c-a43a-454e-b38f-9eb9551b6959",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1050,
+        450
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "972edd32-1532-4efb-a1bc-858e0b280aca",
+              "name": "error",
+              "value": "Summary generation failed",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "6334e42c-5d57-46d2-ac26-c3e2069b74d6",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1250,
+        450
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_SLACK_WEBHOOK_URL",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": false,
+        "headerParameters": {
+          "parameters": []
+        },
+        "options": {},
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "Chat summary failed for chat_id: {{ $json.chat_id }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "63de1190-129e-4a9b-9852-f3773747f0cd",
+      "name": "End",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1450,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Chat End Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Transcript": {
+      "main": [
+        [
+          {
+            "node": "Claude Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Summary": {
+      "main": [
+        [
+          {
+            "node": "Summary OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary OK?": {
+      "main": [
+        [
+          {
+            "node": "Parse Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Report": {
+      "main": [
+        [
+          {
+            "node": "Email Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Manager": {
+      "main": [
+        [
+          {
+            "node": "Store in Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store in Airtable": {
+      "main": [
+        [
+          {
+            "node": "End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Error": {
+      "main": [
+        [
+          {
+            "node": "End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    "Gumroad",
+    "Production",
+    "Template",
+    "Oyekola Ololade"
+  ],
+  "pinData": {},
+  "staticData": null
+}
