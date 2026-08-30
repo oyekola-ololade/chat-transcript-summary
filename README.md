@@ -35,8 +35,16 @@ Turns a raw support chat transcript into a structured summary for managers and a
 
 ## Architecture
 
-Open the [visual project page](./index.html#architecture) for the flow derived from the sanitized export.
+The diagram below represents the sanitized template flow. External services, credentials, and environment-specific identifiers must be configured before execution.
 
+```mermaid
+flowchart TD
+    A["Chat-end webhook"] --> B["Extract chat ID, transcript, and customer"]
+    B --> C["Claude structured summary"]
+    C --> D["Parse issue, resolution, satisfaction, and actions"]
+    D --> E["Email manager"]
+    D --> F["Archive summary in Airtable"]
+```
 
 ## Workflow
 
